@@ -4,7 +4,7 @@ import re
 from typing import Any, Dict
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -66,9 +66,31 @@ class MatchingScoreRequest(BaseModel):
 
 # === ROUTES ===
 
+
+
+'''
+def get_difficulty_level(niveau: str) -> str:
+    niveau = niveau.lower().strip()
+    if "aucune" in niveau or "0" in niveau or "1" in niveau:
+        return "facile"
+    elif any(x in niveau for x in ["2", "3", "4"]):
+        return "moyenne"
+    elif any(x in niveau for x in ["5", "6", "7", "8", "9", "10", "plus"]):
+        return "difficile"
+    else:
+        return "moyenne"
+
+# ===== Route principale =====
 @app.post("/generate-test", response_model=Dict[str, Any])
-async def generate_test() -> Dict[str, Any]:
+async def generate_test(offre: OffreInput) -> Dict[str, Any]:
     selected_traits = ["Empathy", "Communication", "Self-Control", "Sociability", "Conscientiousness"]
+    difficulty = get_difficulty_level(offre.niveauExperience)
+
+    niveau_difficulte = {
+        "facile": "- Les questions doivent être simples et accessibles.",
+        "moyenne": "- Les questions doivent avoir une difficulté modérée, avec des situations classiques du poste.",
+        "difficile": "- Les questions doivent être complexes, incluant des dilemmes, des cas concrets ou des analyses comportementales poussées."
+    }[difficulty]
 
     prompt = f"""
     Tu es un expert en psychologie RH.
@@ -76,6 +98,16 @@ async def generate_test() -> Dict[str, Any]:
     Génère 10 questions de test de personnalité sous forme de QCM (Questions à Choix Multiples).
     Chaque deux questions doivent évaluer l’un des 5 traits suivants :
     {', '.join(selected_traits)}.
+
+    Ces questions doivent être adaptées à l’offre suivante :
+    - Poste : {offre.poste}
+    - Description : {offre.description}
+    - Type de travail : {offre.typeTravail}
+    - Niveau d’expérience requis : {offre.niveauExperience}
+    - Responsabilités principales : {offre.responsabilite}
+    - Expérience professionnelle attendue : {offre.experience}
+
+    {niveau_difficulte}
 
     Format requis en JSON :
     [
@@ -128,7 +160,8 @@ async def generate_test() -> Dict[str, Any]:
         )
 
     return {"questions": questions}
-
+    
+    '''
 @app.post("/generate-image-question")
 async def generate_image_question(data: ImageQuestionRequest) -> Dict[str, str]:
     prompt = f"""
