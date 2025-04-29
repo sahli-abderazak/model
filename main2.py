@@ -186,7 +186,6 @@ async def match_cv_offre(data: MatchingScoreRequest) -> Dict[str, Any]:
     {data.cv}
 
     Offre d'emploi :
-    Poste recherché: {offre.poste}
     Description: {offre.description}
     Niveau d'expérience: {offre.niveauExperience}
     Niveau d’étude: {offre.niveauEtude}
@@ -195,16 +194,17 @@ async def match_cv_offre(data: MatchingScoreRequest) -> Dict[str, Any]:
     Pays: {offre.pays}
     Ville: {offre.ville}
 
-    Instructions obligatoires :
-    1. Analyse si le poste du candidat correspond globalement au poste recherché, même si les mots sont différents.
-       - Si les domaines sont totalement différents (exemple : comptable vs développeur), arrête l'analyse immédiatement.
-       - Dans ce cas, donne un score de 0 et une explication rapide sans analyser les autres critères.
-    2. Si le poste est similaire ou dans le même domaine, continue l'analyse :
-       - Compare les expériences du candidat et les responsabilités demandées
-       - Compare le niveau d’étude et d’expérience
-       - Analyse les compétences techniques et comportementales
+    Analyse les similarités entre :
+    - Les expériences du candidat et les responsabilités demandées
+    - Le niveau d’étude et d’expérience
+    - Les compétences techniques et comportementales
 
-    Réponds uniquement au format JSON suivant :
+    Donne :
+    - Un score de matching entre 0 et 100
+    - Une évaluation brève de l'adéquation du profil
+    - Les points forts et les écarts
+
+    Réponds uniquement au format JSON :
     {{
         "score": 87,
         "evaluation": "Le profil est globalement adapté au poste, avec une bonne expérience en gestion de projet.",
