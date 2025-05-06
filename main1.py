@@ -2,7 +2,7 @@ import os
 import json
 import re
 from typing import Any, Dict
-
+import random
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,7 +61,6 @@ async def generate_test(
     offre: OffreInput = Body(...),
     poids: PoidsTraitsInput = Body(...)
 ) -> Dict[str, Any]:
-
     poids_traits = {
         "ouverture": poids.ouverture,
         "conscience": poids.conscience,
@@ -71,47 +70,49 @@ async def generate_test(
     }
 
     prompt = fr"""
-    Tu es un psychologue expert en recrutement et un rédacteur de tests professionnels. Crée un test de personnalité basé sur le modèle des Big Five (ouverture, conscience, extraversion, agréabilité, stabilité émotionnelle), conçu pour évaluer la compatibilité d’un candidat avec l’offre suivante :
+Tu es un psychologue expert en recrutement et un rédacteur de tests professionnels. Crée un test de personnalité basé sur le modèle des Big Five (ouverture, conscience, extraversion, agréabilité, stabilité émotionnelle), conçu pour évaluer la compatibilité d’un candidat avec l’offre suivante :
 
-    ### Informations sur l’offre :
-    - Poste : {offre.poste}
-    - Description : {offre.description}
-    - Type de travail : {offre.typeTravail}
-    - Niveau d’expérience requis : {offre.niveauExperience}
-    - Responsabilités principales : {offre.responsabilite}
-    - Expérience professionnelle attendue : {offre.experience}
+### Informations sur l’offre :
+- Poste : {offre.poste}
+- Description : {offre.description}
+- Type de travail : {offre.typeTravail}
+- Niveau d’expérience requis : {offre.niveauExperience}
+- Responsabilités principales : {offre.responsabilite}
+- Expérience professionnelle attendue : {offre.experience}
 
-    ### Instructions spécifiques :
-    - Le test contiendra **au maximum 15 questions**, réparties comme suit :
-      - {poids.ouverture} questions sur l’ouverture
-      - {poids.conscience} sur la conscience
-      - {poids.extraversion} sur l’extraversion
-      - {poids.agreabilite} sur l’agréabilité
-      - {poids.stabilite} sur la stabilité émotionnelle
+### Instructions spécifiques :
+- Le test contiendra **au maximum 15 questions**, réparties comme suit :
+  - {poids.ouverture} questions sur l’ouverture
+  - {poids.conscience} sur la conscience
+  - {poids.extraversion} sur l’extraversion
+  - {poids.agreabilite} sur l’agréabilité
+  - {poids.stabilite} sur la stabilité émotionnelle
 
-    - Chaque question doit :
-      - Être **contextualisée dans des situations de travail réelles ou techniques** liées à l’offre.
-      - Avoir une **formulation unique**, avec un **contexte professionnel distinct pour chaque question**.
-      - Employer un **langage technique ou professionnel adapté au domaine du poste**.
-      - Être rédigée sous forme de **QCM à 4 réponses** (avec scores de 1 à 5).
+- Chaque question doit :
+  - Être **contextualisée dans des situations de travail réelles ou techniques** liées à l’offre.
+  - Avoir une **formulation unique**, avec un **contexte professionnel distinct pour chaque question**.
+  - Employer un **langage technique ou professionnel adapté au domaine du poste**.
+  - Être rédigée sous forme de **QCM à 4 réponses** (avec scores de 1 à 5), où chaque option est formulée comme une **réponse comportementale concrète et nuancée**.
+  - Chaque option doit représenter un **comportement ou une attitude spécifique** face à la situation décrite.
+  - Les options doivent rester **cohérentes avec l’intention du trait de personnalité évalué**, tout en étant **distinctes et plausibles**.
 
-    - Ne répète pas les contextes d’une question à l’autre.
-    - Ne sors pas du format JSON suivant, sans balises ni explications :
+- Ne répète pas les contextes d’une question à l’autre.
+- Ne sors pas du format JSON suivant, sans balises ni explications :
 
-    [
-        {{
-            "trait": "conscience", 
-            "question": "Lorsque je travaille sur plusieurs projets à échéance courte, je suis capable de hiérarchiser mes tâches efficacement.", 
-            "options": [
-                {{"text": "Pas du tout d’accord", "score": 1}},
-                {{"text": "Plutôt pas d’accord", "score": 2}},
-                {{"text": "Plutôt d’accord", "score": 4}},
-                {{"text": "Tout à fait d’accord", "score": 5}}
-            ]
-        }},
-        ...
-    ]
-    """
+[
+    {{
+        "trait": "conscience", 
+        "question": "Lorsque je travaille sur plusieurs projets à échéance courte, je suis capable de hiérarchiser mes tâches efficacement.", 
+        "options": [
+            {{"text": "Je préfère attendre les instructions claires de mon supérieur avant de commencer.", "score": 1}},
+            {{"text": "Je commence le travail mais demande des clarifications au fur et à mesure.", "score": 2}},
+            {{"text": "Je prends l’initiative en me basant sur mes expériences précédentes.", "score": 4}},
+            {{"text": "Je planifie et lance le projet de manière autonome en anticipant les obstacles.", "score": 5}}
+        ]
+    }},
+    ...
+]
+"""
 
     try:
         response = client.chat.completions.create(
@@ -121,7 +122,7 @@ async def generate_test(
             temperature=0.7
         )
     except Exception as e:
-        print(" Erreur OpenAI:", e)
+        print("Erreur OpenAI:", e)
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'appel à OpenAI: {str(e)}")
 
     content = response.choices[0].message.content
@@ -148,16 +149,16 @@ async def generate_test(
     if not isinstance(questions, list) or not all(
         isinstance(q, dict) and 'trait' in q and 'question' in q and 'options' in q for q in questions
     ):
-        print(" Format JSON incorrect:", questions)
+        print("Format JSON incorrect:", questions)
         return JSONResponse(
             status_code=400,
             content={"error": "Le format des questions n'est pas correct.", "raw": cleaned_content}
         )
-
+    for q in questions:
+        random.shuffle(q['options'])
     return {
         "questions": questions,
     }
-
 
 
 
